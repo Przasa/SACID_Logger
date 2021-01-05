@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<Panel Type="Vector.CANalyzer.Panels.PanelSerializer, Vector.CANalyzer.Panels.Serializer, Version=12.0.101.0, Culture=neutral, PublicKeyToken=null">
+  <Object Type="Vector.CANalyzer.Panels.Runtime.Panel, Vector.CANalyzer.Panels.Common, Version=12.0.101.0, Culture=neutral, PublicKeyToken=null" Name="Panel" Children="Controls" ControlName="LoggerPanel">
+    <Object Type="Vector.CANalyzer.Panels.Design.ButtonControl, Vector.CANalyzer.Panels.CommonControls, Version=12.0.101.0, Culture=neutral, PublicKeyToken=null" Name="ButtonControl1" Children="Controls" ControlName="Button">
+      <Property Name="Name">ButtonControl1</Property>
+      <Property Name="Size">113, 52</Property>
+      <Property Name="Location">30, 25</Property>
+      <Property Name="Text">Ogień!</Property>
+      <Property Name="SymbolConfiguration">6;16;LoggerNamespace;;;svButton;1;;;-1;;;;</Property>
+      <Property Name="TabIndex">0</Property>
+    </Object>
+    <Property Name="Name">Panel</Property>
+    <Property Name="Size">169, 122</Property>
+    <Property Name="BackColor">White</Property>
+  </Object>
+</Panel>

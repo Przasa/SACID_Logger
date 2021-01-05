@@ -1,0 +1,434 @@
+/*@!Encoding:1252*/
+includes
+{
+  
+}
+
+// TODO: cos zeby utrzymac analogi
+variables
+{
+  const ISDEBUG =0;     //0: production, 1: debug (this mode has additional logging)
+  
+  // FRAMES
+  pdu ISOx_SACID_1_Req_FD_XIX_HCP5_CANFD01 Diag_Req;
+  pdu NM_Gateway_XIX_HCP5_CANFD01 NM_Msg;  
+  
+  //TIMERS AND TIMEOUTS
+  msTimer timer_for_jump;
+  msTimer timer_for_response;
+  msTimer timer_for_cyclic_tester;
+  msTimer timer_for_cyclic_nmgateway;
+  msTimer timer_for_cyclic_adc;
+  //msTimer timer_for_periodic_request;
+  CONST TIMEOUT_LONG=500;
+  CONST TIMEOUT_SHORT=500;
+  CONST TIMEOUT_CYCLIC_TESTER =3000;
+  CONST TIMEOUT_CYCLIC_NMGATEWAY =100;
+  CONST TIMEOUT_CYCLIC_ADC = 500;
+  
+  //MACHINE_STATES
+    //  int MSTATE_WAIT=0;
+  const MSTATE_DEFSESSION=1;
+  const MSTATE_EXSESSION=2;
+  const MSTATE_SECACCREQ=3;
+  const MSTATE_SECACCKEY=4;
+  const MSTATE_APSESSION=5;
+  const MSTATE_TESTER=6;
+  const MSTATE_NMGATEWAY=7;
+  const MSTATE_ADCREAD=8;
+  int ACTIVE_MSTATE=0;
+  
+  //MESSAGE_TYPES
+  const MESTYPE_DEFAULT=0;
+  const MESTYPE_ADC=1;
+  const MESTYPE_DTC=2;  
+
+  // DIAGNOSTIC_CODES
+  byte req_session_default[8]={0x02,0x10,0x01,0xFF,0xFF,0xFF,0xFF,0xFF};
+  byte req_session_extended[8]={0x02,0x10,0x03,0xFF,0xFF,0xFF,0xFF,0xFF};
+  byte req_security_accrequest[8]={0x02,0x27,0x61,0xFF,0xFF,0xFF,0xFF,0xFF};
+  byte req_security_acckey[8]={0x06,0x27,0x62,0x00,0x01,0x02,0x03,0xFF};  
+  byte req_session_aptiv[8]={0x02,0x10,0x60,0x00,0x01,0x02,0x03,0xFF};
+  
+  byte req_cyclic_tester[8]={0x02,0x3E,0x00,0x00,0x00,0x02,0x03,0xFF}; // resp: 02 7E 00 00 00 00 00 00
+  byte req_cyclic_nmgateway[24]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  byte req_cyclic_adc[8] = {0x03,0x22,0xFD, 0x00, 0xFF, 0xFF, 0xFF, 0xFF};
+  
+  byte resp_session_default_positive[8] = {0x06,0x50,0x01,0x00,0x32,0x01,0xF4,0x00};
+  byte resp_session_extended_positive[8]= {0x06,0x50,0x03,0x00,0x32,0x01,0xF4,0x00};
+  byte resp_security_accrequest_positive[8]= {0x06,0x67,0x61,0x04,0x05,0x06,0x07,0x00}; 
+  byte resp_security_acckey_positive[8]= {0x02,0x67,0x62,0x00,0x00,0x00,0x00,0x00};  
+  byte resp_session_aptiv_positive[8]= {0x06,0x50,0x60,0x00,0x32,0x01,0xF4,0x00};
+  byte resp_adc[4]={0x00,0x3B,0x62,0xFD};
+  byte resp_adc_header[5]={0x00,0x3B,0x62,0xFD,0x00};
+  
+  // BUFFORS 
+  byte LAST_REQUEST_RESPONSE[64]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  
+  // STRINGS COLLECTION   //TODO: extend this list. 
+  char string_can_received[21] = "CAN FRAME RECEIVED: ";
+  char string_can_sended[17] ="CAN FRAME SEND: ";
+  char string_cyclic_can_sended[27] ="CYCLIC CAN FRAME SENDING: ";
+  char string_adc[7] = ",ADC, ";
+  char string_empty[1] = "";
+  
+}
+
+// testing
+on start{
+    //sendPeriodicRequest(req_cyclic_nmgateway,TIMEOUT_CYCLIC_NMGATEWAY);
+  char dest[4]="ccc";
+  char src[5]="dddd";
+  char buf[1];
+  
+  write("");
+  
+  
+  write("size: %d, values: %s",elCount(buf),buf);
+  strncat(buf,dest,elCount(dest));
+  write("size: %d, values: %s",elCount(buf),buf);
+  strncat(buf,src,elCount(buf)+elCount(dest)+elCount(src)-2);
+  write("size: %d, values: %s",elCount(buf),buf);
+  
+}
+
+
+
+// ::::::::::::::::::::::::::::::::::::::::::: GLOBAL LOGIC :::::::::::::::::::::::::::::::::::::::::::
+
+main_function(){  // ~ state machine
+  
+  switch(ACTIVE_MSTATE){
+    case MSTATE_DEFSESSION:
+      if (ISDEBUG) {write("STATE: 1 (SESSION_DEFAULT)");  }
+      sendRequest_diag(req_session_default,elCount(req_session_default));
+      handleReaction(TIMEOUT_LONG); break;     
+    case MSTATE_EXSESSION:
+      if(ISDEBUG) {write("STATE: 2 (SESSION_EXTENDED)");}
+      sendRequest_diag(req_session_extended,elCount(req_session_extended));
+      handleReaction(TIMEOUT_LONG);break;
+    case MSTATE_SECACCREQ:
+      IF(ISDEBUG){ write("STATE: 3 (SECURITY_REQUEST)");}
+      sendRequest_diag(req_security_accrequest,elCount(req_security_accrequest));
+      handleReaction(TIMEOUT_LONG);break;
+    case MSTATE_SECACCKEY:
+      if (ISDEBUG){ write("STATE: 4 (SECURITY_KEY)");}
+      sendRequest_diag(req_security_acckey,elCount(req_security_acckey));
+      handleReaction(TIMEOUT_LONG);break;
+    case MSTATE_APSESSION:
+      if(ISDEBUG) {write("STATE: 5 (SESSION_APTIV)");}
+      sendRequest_diag(req_session_aptiv,elCount(req_session_aptiv));
+      handleReaction(TIMEOUT_LONG);break;
+    case MSTATE_TESTER:
+      if(ISDEBUG) {write("STATE: 6 (CYCLIC TESTER)");}
+      sendPeriodicRequest(req_cyclic_tester,TIMEOUT_CYCLIC_TESTER);
+      write("intialization finished.");
+      jump_mstate(TIMEOUT_SHORT,MSTATE_ADCREAD);
+      break;
+    case MSTATE_NMGATEWAY:  // dead case
+      if(ISDEBUG) { write("STATE: 7 (CYCLIC NMGATEWAY)");}
+      sendPeriodicRequest(req_cyclic_nmgateway,TIMEOUT_CYCLIC_NMGATEWAY);
+      break;
+    case MSTATE_ADCREAD:
+      if(ISDEBUG) { write("STATE: 8 (ADC READ)");}
+      sendPeriodicRequest(req_cyclic_adc,TIMEOUT_CYCLIC_ADC);
+      break;
+  } 
+  
+}
+
+jump_mstate(int miliseconds,int next_machine_state){
+  if(ISDEBUG) { write("jumping into state: %d",next_machine_state);}
+  ACTIVE_MSTATE=next_machine_state;
+  setTimer(timer_for_jump,miliseconds);
+}
+
+handleReaction(int timeout){
+  int current_state;
+  int i;
+  
+  if(timeout !=-0){
+    //write("waiting for response... (%d ms)",timeout);
+    setTimer(timer_for_response,timeout);  // waiting for response
+  }
+  else{
+    current_state=ACTIVE_MSTATE;
+    if(ISDEBUG) { write("veryfing response in state: %d,",current_state);}
+    
+    switch(current_state){
+      case MSTATE_DEFSESSION:
+        if(compareFrames(LAST_REQUEST_RESPONSE,resp_session_default_positive)){
+          jump_mstate(TIMEOUT_SHORT,MSTATE_EXSESSION);
+        }
+        break;
+      case MSTATE_EXSESSION:
+        if(compareFrames(LAST_REQUEST_RESPONSE,resp_session_extended_positive)){
+          jump_mstate(TIMEOUT_SHORT,MSTATE_SECACCREQ);
+        }
+        break;
+      case MSTATE_SECACCREQ:
+        if(compareFrames(LAST_REQUEST_RESPONSE,resp_security_accrequest_positive)){
+          jump_mstate(TIMEOUT_SHORT,MSTATE_SECACCKEY);
+        }
+        break;
+      case MSTATE_SECACCKEY:
+        if(compareFrames(LAST_REQUEST_RESPONSE,resp_security_acckey_positive)){
+          jump_mstate(TIMEOUT_SHORT,MSTATE_APSESSION);
+        }
+        break;
+      case MSTATE_APSESSION:
+        if(compareFrames(LAST_REQUEST_RESPONSE,resp_session_aptiv_positive)){
+          jump_mstate(TIMEOUT_SHORT,MSTATE_TESTER);
+          
+        }
+        break;
+        //default:;
+          
+    }
+  }
+}
+
+on timer timer_for_jump{
+  main_function();
+}
+
+on timer timer_for_response{
+  handleReaction(0);
+}
+
+
+
+
+// ::::::::::::::::::::::::::::::::::::::::::: INPUTS / OUTPUTS :::::::::::::::::::::::::::::::::::::::::::
+
+on sysvar LoggerNamespace::svButton{
+  
+  if(@this==1){
+    write("starting initial configuration...");
+    // key pressed
+    jump_mstate(TIMEOUT_SHORT,MSTATE_DEFSESSION);
+  }else{
+    // key released
+  }
+}
+
+sendRequest_diag(byte frame[],int size){
+  int i;
+  
+  Diag_Req.PduLength=size;
+  for(i=0;i<size;i++){    Diag_Req.byte(i)=frame[i];    }
+  triggerPDU(Diag_Req);
+  
+  if(ISDEBUG){
+    printFrame(frame,size,string_can_sended,elCount(string_can_sended)); // optional  
+  }
+  
+  
+}
+
+sendRequest_nm(byte frame[],int size){
+  int i;
+  
+  NM_Msg.PduLength=size;
+  for(i=0;i<size;i++){    NM_Msg.byte(i)=frame[i];    }
+  triggerPDU(NM_Msg);
+  
+  IF(ISDEBUG){
+    printFrame(frame,size,string_cyclic_can_sended,elCount(string_cyclic_can_sended));
+  }
+  
+}
+
+
+sendPeriodicRequest(byte frame[], int cyclicTime){
+  
+  if(compareFrames(frame,req_cyclic_tester)==1){
+    sendRequest_diag(req_cyclic_tester,elCount(req_cyclic_tester));
+    setTimer(timer_for_cyclic_tester,TIMEOUT_CYCLIC_TESTER);
+  } else if(compareFrames(frame,req_cyclic_nmgateway)==1){
+    sendRequest_diag(req_cyclic_nmgateway,elCount(req_cyclic_nmgateway));
+    setTimer(timer_for_cyclic_nmgateway,TIMEOUT_CYCLIC_NMGATEWAY);
+  } else if(compareFrames(frame,req_cyclic_adc)==1){
+    sendRequest_diag(req_cyclic_adc,elCount(req_cyclic_adc));
+    setTimer(timer_for_cyclic_adc,TIMEOUT_CYCLIC_ADC);
+  }
+  
+}
+
+on timer timer_for_cyclic_tester{
+  setTimer(timer_for_cyclic_tester,TIMEOUT_CYCLIC_TESTER);
+  sendRequest_diag(req_cyclic_tester,elCount(req_cyclic_tester));
+}
+
+on timer timer_for_cyclic_nmgateway{
+  setTimer(timer_for_cyclic_nmgateway,TIMEOUT_CYCLIC_NMGATEWAY);
+  sendRequest_nm(req_cyclic_nmgateway,elCount(req_cyclic_nmgateway));
+}
+
+on timer timer_for_cyclic_adc{
+  setTimer(timer_for_cyclic_adc,TIMEOUT_CYCLIC_ADC);
+  sendRequest_diag(req_cyclic_adc,elCount(req_cyclic_adc));
+}
+
+
+//on message 0x1c46001Bx{
+on PDU ISOx_SACID_1_Resp_FD_XIX_HCP5_CANFD01{ //~=onRequestReponse
+  int i=0;
+  int _message_size=8;
+  int _message_type=0;
+  byte _message_content[200];
+  _message_size = this.PduLength;
+  
+  // clearing response buffer
+  for (i=0;i<elCount(LAST_REQUEST_RESPONSE);i++){    LAST_REQUEST_RESPONSE[i]=0;  }
+  // storing response
+  for (i=0;i<_message_size;i++){
+    _message_content[i]=this.byte(i);
+    LAST_REQUEST_RESPONSE[i] = _message_content[i];
+  } 
+  
+  _message_type=getMessageType(_message_content,_message_size);
+  switch(_message_type){
+    case MESTYPE_ADC:
+      printADCframe(_message_content,_message_size); break;
+     case MESTYPE_DEFAULT:
+      if(ISDEBUG){ printFrame(_message_content,_message_size,string_can_received,elCount(string_can_received));}
+  }
+  
+//  if(ISDEBUG){
+//    printFrame(LAST_REQUEST_RESPONSE,_message_size,string_can_received,elCount(string_can_received));
+//  } else{
+//    if(_message_size>8){
+//      printFrame(LAST_REQUEST_RESPONSE,_message_size,string_adc,elCount(string_adc)); 
+//    } //optional    
+//  }
+//  
+ 
+  
+}
+
+// ::::::::::::::::::::::::::::::::::::::::::: MISC FUNCTIONS :::::::::::::::::::::::::::::::::::::::::::
+
+printFrame(byte hex_frame[], int size, char prefix[], int prefix_size){
+  char _char_buffer[200]="";
+  char _char_temp[8];
+  int i;
+  
+  snprintf(_char_buffer,size,""); // clearing variable  
+
+  if(prefix_size>0){    strncat(_char_buffer,prefix,prefix_size);  } //adding prefix
+    
+  for (i=0;i<size;i++){
+    snprintf(_char_temp,elCount(_char_temp),"%02X ",hex_frame[i]);  //%.2X
+    strncat(_char_buffer,_char_temp,elcount(_char_buffer));
+  }
+    
+  write("%s",_char_buffer);
+
+}
+
+printADCframe(byte hex_frame[],int size){
+  char _char_buffer[200]="";
+  char _char_temp[3];
+  int isNewVal=0;
+  int i;
+  
+  strncat(_char_buffer,string_adc,elCount(string_adc));
+  
+  for (i=0;i<size;i++){
+    if (i<=4) {continue;}
+    isNewVal = ((i %2)==0 & i>=6);
+    snprintf(_char_temp,elCount(_char_temp),"%02X",hex_frame[i]);  //%.2X
+    if(isNewVal){strncat(_char_temp,",",8);}
+    write("char buffer: %s",_char_temp);
+    strncat(_char_buffer,_char_temp,elcount(_char_buffer)+4);
+  }
+  
+  
+  
+  write("%s",_char_buffer);
+
+}
+
+//"try, catch" would be nice here ;) 
+int compareFrames(byte frame_verified[], byte frame_correct[]){
+  int i;
+
+  for (i=0;i<elCount(frame_correct);i++){
+    if (frame_verified[i]!=frame_correct[i]) { 
+      //write ("response incorrect!");
+      return 0;
+    }
+  }
+  
+  return 1;
+  
+}
+
+int getMessageType(byte hex_frame[], int frame_size){
+  if(compareFrames(hex_frame,resp_adc_header)==1){
+    return MESTYPE_ADC;
+  } else{
+    return MESTYPE_DEFAULT;
+  }
+}
+
+// :::::: SAMPLES ::::::
+
+// on signal TestSignal{
+//   write("costam");
+// }
+
+// on message TestMessage{
+//   write("test message");
+// }
+
+
+//variables
+//{ 
+//  int ar[100];
+//}
+//
+//on diagResponse TCCM.*
+//{
+//  char tmp[8];    // Temporary buffer containing single HEX value
+//  char out[301];  // Bigger output string and "local" to function
+//  // Better to place them there (i and response) if they are not global
+//  int i;
+//  byte response[100];
+//  
+//  out[0] = 0;     // Clear output string
+//  
+//  s1 = DiagGetPrimitiveData(this, response, elcount(response));
+//
+//  for (i = 0; i < s1; i++)
+//  { 
+//    ar[i] = response[i];
+//    snprintf(tmp, elcount(tmp), "%.2X ", response[i]);  // byte to HEX convert
+//    strncat(out, tmp, elcount(out));  // Concatenate HEX value to output string
+//  }
+//
+//  write("HEX Response : %s", out);
+//}
+
+
+  //  // definition of a character array buffer
+  // char buffer[100];
+  // // conversion of an integer variable to a character array
+  // snprintf(buffer,elcount(buffer),"%d",integervariable);
+  // // setting of a system variable of type string with the buffer
+  // sysSetVariableString(sysvar::my_string_sysvar,buffer);
+
+//on timer tDelay
+//{
+//  @EnvDelayFunct = 1;
+//}
+//
+//void delay(int ms)
+//{
+//  int a;
+//  write("Wait for %i ms", ms); 
+//  setTimer(tDelay, ms);
+//  a = testWaitForEnvVar(EnvDelayFunct, 0);
+//  @EnvDelayFunct = 0;
+//}

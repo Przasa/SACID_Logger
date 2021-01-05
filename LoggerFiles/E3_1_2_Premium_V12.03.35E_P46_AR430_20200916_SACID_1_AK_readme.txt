@@ -1,0 +1,93 @@
+
+P01
+BUSNET-4038 BaseType for transforming_isignal
+P02
+BUSNET-4120 fix minimum delay
+P03
+BUSNET-4283 NM FCAB/ FCIB GenSigFuncType
+P04
+BUSNET-4310 fix CONSUMED-SERVICE-INSTANCE-001
+P05
+BUSNET-4496 Export Attribute EndToEndTransformationDescription.xxx
+P06
+BUSNET-4497 fix service discovery
+P07
+BUSNET-4499 EXECUTE-DESPITE-DATA-UNAVAILABILITY
+P08
+BUSNET-4521 E2E Buffer Computation
+P09
+BUSNET-4528 NM-PNC-PARTICIPATION
+P10
+BUSNET-4529 NMPdu-UnusedBitPattern
+P11
+BUSNET-4556 sok validation
+P12
+BUSNET-4558 remove zero timeouts
+P13
+BUSNET-4564 string dynamic array size
+P14
+BUSNET-4579 - [constr_1006]: Category of ApplicationRecordElement
+P15
+BUSNET-4583 DYNAMIC-ARRAY-SIZE-PROFILE bei fixed-Size Array darf nicht gesetzt werden
+P16
+BUSNET-4586 NmECU
+P17
+BUSNET-4614 Richtiger LENGHT-Wert aus Excel
+P18
+BUSNET-4615 min max Compu-Methods und Data-Constr-Rules 12.03.30
+P19
+BUSNET-4633 TransformationISignalProps.csErrorReaction ist nicht gesetzt für E2E und SOMEIP
+P20
+BUSNET-4646 Native Sender to PDU
+P21
+BUSNET-4648 SOK Key-IDs
+P22
+BUSNET-4686 TransformationTechnology.version for SOME/IP-Transformer
+P23
+BUSNET-4688 CanNmClusterCoupling.nmBusloadReductionEnabled
+P24
+BUSNET-4696 CommunicationDirection bei ClientServerToSignalMapping entfernen
+P25
+BUSNET-4722 Service-Instance-Ref von DATA-MAPPINGS bei Service-Signal
+P26
+BUSNET-4725 Inkonsistenz in ARXML -> ComputationMethods in Services
+P27
+BUSNET-4731 SSOA Integration
+P28
+BUSNET-4735 - signals > 64 bits as OPAQUE and SOK > 32 bits as OPAQUE
+P29
+BUSNET-4754 Missing network reference fix
+P30
+BUSNET-4791 ImplementationDataType für Applikationssignale (FIONA)
+P31
+BUSNET-4817 SoAdRoutingGroup Erstellung falsch und Fremde-Referenzen
+P32
+BUSNET-4819 Data-ID Length of SOK-PDUs
+P33
+BUSNET-4823 fehlerhafte Bedatung bei EventGroupControlType
+P34
+BUSNET-4850 falsche NM Message Timeout Time entfernen
+P35
+BUSNET-4868 Entfernen von PNC-Parametern bei Ethernet und LIN
+P36
+BUSNET-4881 eindeutige Shortnamespfade für Datentypen
+P37
+BUSNET-4889 SOK auf Ethernet korrigieren
+P38
+BUSNET-4977 CapabilityRecords in EcuExtracts entfernt
+P39
+BUSNET-5206 SOK-Absicherung durch extra Signatur-PDU
+P40
+BUSNET-5207 Startposition von Signalgruppen entfernt
+P41
+BUSNET-5217 Delete unreferenced Signals amd BUSNET-5319_ISignalVoid_-_Korrekturen_für_E2E_und_SOK
+P42
+BUSNET-5265 Leere Container <INFRASTRUCTURE-SERVICES> entfernt
+P43
+BUSNET-5328 String-Usecase - ImplementationDatatype SizeIndicator und Character korrigieren
+P44
+BUSNET-5359 BASE-TYPE-ENCODING bei string UTF-8
+P45
+BUSNET-5362 Array-Usecase - ImplementationDatatype Size korrigieren
+P46
+BUSNET-5385 Unnötige PDUGroups entfernen

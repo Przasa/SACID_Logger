@@ -1,0 +1,68 @@
+notatkis jakeis tu sa.
+
+vals UI:
+MTR_Chip_ID_Env             --> ListBox
+MTR_Register_Address_Env    --> ListBox
+MTR_Write_Env               --> Button
+MTR_Read_Env                --> Button
+MTR_Bitx_Name_Env           --> TextBox
+MTR_Bitx_Read_Env           --> Numeric
+MTR_Bitx_Write_Env          --> Numeric
+
+vals soft:
+int mtr_reg[18][8]; 
+byte temp[8]; 
+int mtr_value =0
+int mtr_temp=0
+
+
+on message 0x1c46001Bx{ //prawdopodobnie odpowiedz na requesta diagnostycznego. wychodzi na to w tej ramce sa juz odpowiedzi na wszystkie rejestry
+    a[i]=this.byte(i); //(int i=0 ;i<6 ;i++);
+
+    else if(a[2]==0x62 && a[3]==0xFD && a[4]==0x08) 
+        {
+
+        for(i=5;i<=22;i++)
+        {
+            a[i]=this.byte(i);  //a[5:22] = this.byte(5:22)
+            for(j=0;j<=7;j++)
+            {
+                temp[j]=a[i]>>j;        //temp[0:8] -> rozdzielone 8 bitow z bajtu
+                temp[j]=temp[j]&1;
+                mtr_reg[i-5][j]=temp[j];    //mtr_reg[0:18=dany_byte][0:8_dany_bit]=
+            }   
+        }
+
+    putvalue(MTR_Bit7_Read_Env,mtr_reg[(mtr_temp+mtr_value)][7]);   // (od 1 do 7)
+
+}
+
+
+
+
+on envVar MTR_Register_Address_Env {
+    mtr_temp=@this-1
+}
+
+on envVar MTR_Chip_ID_Env {
+    mtr_value=@this*3
+    switch(@this){
+        case 0x01: mtr_value=0; break;
+        case 0x02: mtr_value=6; break;
+        case 0x03: mtr_value=12; break;
+    }
+}
+
+on envVar MTR_Read_Env  // wysylanie requesta.
+{
+     if(@this==1)
+  {
+ Diag_Req.PduLength=0x8;
+ Diag_Req.byte(0)=0x03;
+ Diag_Req.byte(1)=0x22;
+ Diag_Req.byte(2)=0xFD;
+ Diag_Req.byte(3)=0x08;
+ triggerPDU(Diag_Req);
+  setTimer(Tw,300); // dump
+  }
+}

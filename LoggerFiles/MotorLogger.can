@@ -1,0 +1,423 @@
+/*@!Encoding:1252*/
+includes
+{
+  
+}
+
+variables
+{
+  message 0x111 msg;
+  pdu ISOx_SACID_1_Req_FD_XIX_HCP5_CANFD01 Diag_Req;
+  //byte req_mtr_read[8] = {0x03,0x22,0xFD,0x08,0x01,0x02,0x01,0xFF};
+  //byte req_mtr_read[8] = {0x03,0x22,0xFD,0x08};
+  byte req_mtr_read[8] = {0x03,0x22,0xFD,0x08,0x00,0x00,0x00,0x00};
+  byte resp_mtr_read[8] = {0xXX, 0xXX, 0x62, 0xFD, 0x08, 0xXX, 0xXX, 0xXX}; // TODO: check other bytes
+
+
+  mstimer dumb_timer;
+  msTimer register_switch_tim;
+  
+  int current_chip = 0;
+  int current_register=0;
+  
+  int chip_ids[3]={1,2,3};
+  int register_ids[6]={1,2,3,4,5,6};
+  
+  int v[3] = {1,2,3}; //TESTING
+}
+
+on key 'm'{ //todo: na przycisk
+ 
+ start_request_cycle();
+ //write("przycisk M");
+}
+
+
+//UI FUNCTIONS::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+start_request_cycle(){
+
+  current_chip=chip_ids[0];
+  current_register=register_ids[0];
+  askForRegister(current_chip,current_register);
+  
+}
+
+
+askForRegister(int chip_id, int register_id){
+  
+  if(chip_id<=_maxOfArray(chip_ids) && register_id <=_maxOfArray(register_ids)){
+      putValue(MTR_Chip_ID_Env,chip_id);
+      putValue(MTR_Register_Address_Env,register_id);
+      send_motor_request(req_mtr_read,elCount(req_mtr_read));
+
+      setTimer(register_switch_tim,300);
+  }
+}
+
+
+on timer register_switch_tim{
+//   write("RULETTE_TIMER: chip_id=%d, register_id=%d",current_chip,current_register);
+  if(current_register!=register_ids[elCount(register_ids)-1]){
+    current_register=_nextInArray(current_register,register_ids);
+  } else if(current_chip!=chip_ids[elCount(chip_ids)-1] && current_register==register_ids[elCount(register_ids)-1]){
+    current_chip=_nextInArray(current_chip,chip_ids);
+    current_register=register_ids[0];
+  } else{
+    return;
+  }
+  
+  askForRegister(current_chip,current_register);
+}
+
+//CAN FRAMES::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+on message 0x1c46001Bx{
+  
+}
+
+send_motor_request(byte frame[],int frame_length){
+  int i;
+  i=0;
+  
+  Diag_Req.PduLength=0x08;
+  for(i=0;i<frame_length;i++){
+    Diag_Req.byte(i)=frame[i];
+  }
+  triggerPDU(Diag_Req);
+  //setTimer(dumb_timer,300);
+}
+
+//RAW FUNCTIONS::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+int _maxOfArray(int values[]){
+  int m =0;
+  int i;
+  for(i=0;i<elCount(values);i++){
+    if(values[i]>m){m=values[i];}
+  }
+  return m;
+}
+
+int _nextInArray(int value, int values[]){
+  int i;
+  
+  for(i=0;i<elCount(values);i++){
+    if(values[i]==value && i<elCount(values)-1){
+      return values[i+1];
+    }
+  }
+  
+  return -1;
+  
+}
+
+// TESTING:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+on start{
+  char time_string[50];
+  write("max1 = %d; max2 = %d",_maxOfArray(chip_ids),_maxOfArray(register_ids));
+  getLocalTimeString(time_string);
+  write("time: %s",time_string);
+}
+
+
+
+on key 'n'{   //(testing)
+  msg.dlc=8;
+  msg.byte(0)=0;
+  msg.byte(1)=1;
+  msg.byte(2)=2;
+  msg.byte(3)=3;
+  msg.byte(4)=4;
+  output(msg);
+}
+
+on timer dumb_timer{
+  write("glupi timer");
+}
+
+
+
+//on envVar MTR_Register_Address_Env{
+//    int i;
+//    char chip_name[30], register_name[30];
+//    int readed_values[8]={0,0,0,0,0,0,0,0};
+//    
+//    switch(current_chip){
+//      case 1: 
+//        str_replace(chip_name,0,"Motor 1, Motor 2",29);      break;
+//      case 2:
+//        str_replace(chip_name,0,"Motor 1-2, Motor 3-4",29);        break;
+//      case 3:
+//        str_replace(chip_name,0,"Motor 3, Motor 4",29);        break;
+//    }
+//      
+//    switch(current_register){
+//      case 1:
+//        str_replace(register_name,0,"Fault Status",29);break;
+//      case 2:
+//        str_replace(register_name,0,"VDS and GDS Status",29);break;
+//      case 3:
+//        str_replace(register_name,0,"Main Control Register",29);break;
+//      case 4:
+//        str_replace(register_name,0,"IDRIVE, WD Control",29);break;
+//      case 5:
+//        str_replace(register_name,0,"VDS Control",29);break;
+//      case 6:
+//        str_replace(register_name,0,"Config Control",29);break;
+//    }
+//    
+//    
+//    write("Driver: %s; Rejestr: %s",chip_name,register_name);
+//    
+//      
+//      
+//}
+
+
+////on PDU ISOx_SACID_1_Resp_FD_XIX_HCP5_CANFD01
+//  on message 0x1c46001Bx{
+//    write("bit count=%d, data length=%d, dlc=%d",this.BitCount, this.DataLength,this.dlc);
+//  }
+
+//handleSelection(int chip_id,int register_id){
+//  chip_byte = chip_id;
+//  
+//  switch(register_id){
+//    case 1:
+//      add_byte=0x00;
+//      putvalue(MTR_Bit7_Name_Env,"FAULT");
+//      putvalue(MTR_Bit6_Name_Env,"WDFLT");
+//      putvalue(MTR_Bit5_Name_Env,"GDF");
+//      putvalue(MTR_Bit4_Name_Env,"OCP");
+//      putvalue(MTR_Bit3_Name_Env,"PVDD_UVFL");
+//      putvalue(MTR_Bit2_Name_Env,"VCP_UVFL");
+//      putvalue(MTR_Bit1_Name_Env,"OTSD");
+//      putvalue(MTR_Bit0_Name_Env,"OTW");
+//      break;
+//    case 2:
+//      add_byte=0x01;
+//      putvalue(MTR_Bit7_Name_Env,"H2_GDF");
+//      putvalue(MTR_Bit6_Name_Env,"L2_GDF");
+//      putvalue(MTR_Bit5_Name_Env,"H1_GDF");
+//      putvalue(MTR_Bit4_Name_Env,"L1_GDF");
+//      putvalue(MTR_Bit3_Name_Env,"H2_VDS");
+//      putvalue(MTR_Bit2_Name_Env,"L2_VDS");
+//      putvalue(MTR_Bit1_Name_Env,"H1_VDS");
+//      putvalue(MTR_Bit0_Name_Env,"L1_VDS");
+//      break;
+//    case 3:
+//      add_byte=0x02;
+//      putvalue(MTR_Bit7_Name_Env,"RESERVED");
+//      putvalue(MTR_Bit6_Name_Env,"RESERVED");
+//      putvalue(MTR_Bit5_Name_Env,"LOCK");
+//      putvalue(MTR_Bit4_Name_Env,"LOCK");
+//      putvalue(MTR_Bit3_Name_Env,"LOCK");
+//      putvalue(MTR_Bit2_Name_Env,"IN1/PH");
+//      putvalue(MTR_Bit1_Name_Env,"IN2/EN");
+//      putvalue(MTR_Bit0_Name_Env,"CLR_FLT");
+//      break;
+//    case 4:
+//      add_byte=0x03;
+//      putvalue(MTR_Bit7_Name_Env,"TDEAD");
+//      putvalue(MTR_Bit6_Name_Env,"TDEAD");
+//      putvalue(MTR_Bit5_Name_Env,"WD_EN");
+//      putvalue(MTR_Bit4_Name_Env,"WD_DLY");
+//      putvalue(MTR_Bit3_Name_Env,"WD_DLY");
+//      putvalue(MTR_Bit2_Name_Env,"IDRIVE");
+//      putvalue(MTR_Bit1_Name_Env,"IDRIVE");
+//      putvalue(MTR_Bit0_Name_Env,"IDRIVE");
+//      break;
+//    case 5:
+//      add_byte=0x04;
+//      putvalue(MTR_Bit7_Name_Env,"SO_LIM");
+//      putvalue(MTR_Bit6_Name_Env,"VDS");
+//      putvalue(MTR_Bit5_Name_Env,"VDS");
+//      putvalue(MTR_Bit4_Name_Env,"VDS");
+//      putvalue(MTR_Bit3_Name_Env,"DIS_H2_VDS");
+//      putvalue(MTR_Bit2_Name_Env,"DIS_L2_VDS");
+//      putvalue(MTR_Bit1_Name_Env,"DIS_H1_VDS");
+//      putvalue(MTR_Bit0_Name_Env,"DIS_L1_VDS");
+//      break;
+//    case 6:
+//      add_byte=0x05;
+//      putvalue(MTR_Bit7_Name_Env,"TOFF");
+//      putvalue(MTR_Bit6_Name_Env,"TOFF");
+//      putvalue(MTR_Bit5_Name_Env,"CHOP_DIS");
+//      putvalue(MTR_Bit4_Name_Env,"VREF_SCL");
+//      putvalue(MTR_Bit3_Name_Env,"VREF_SCL");
+//      putvalue(MTR_Bit2_Name_Env,"SH_EN");
+//      putvalue(MTR_Bit1_Name_Env,"GAIN_CS");
+//      putvalue(MTR_Bit0_Name_Env,"GAIN_CS");
+//      break;
+//  }
+//}
+
+
+
+//on envVar MTR_Chip_ID_Env
+//{
+//   
+//  if(@this==0x01)
+//  { 
+//    chip[0]=0x01;
+//    mtr_value=0;
+//  }
+//  
+//  if(@this==0x02)
+//  {
+//    chip[0]=0x02;
+//    mtr_value=6;
+//  
+//  }
+//  if(@this==0x03)
+//  { 
+//    chip[0]=0x03;
+//    mtr_value=12;
+//  
+//  }
+//}
+
+//  on envVar MTR_Register_Address_Env
+//{
+//   
+//  if(@this==0x01)
+//  { 
+//    Add[0]=0x00;
+//    mtr_temp=0;
+//putvalue(MTR_Bit7_Name_Env,"FAULT");
+//putvalue(MTR_Bit6_Name_Env,"WDFLT");
+//putvalue(MTR_Bit5_Name_Env,"GDF");
+//putvalue(MTR_Bit4_Name_Env,"OCP");
+//putvalue(MTR_Bit3_Name_Env,"PVDD_UVFL");
+//putvalue(MTR_Bit2_Name_Env,"VCP_UVFL");
+//putvalue(MTR_Bit1_Name_Env,"OTSD");
+//putvalue(MTR_Bit0_Name_Env,"OTW");
+//  }
+//  
+//  if(@this==0x02)
+//  {
+//    Add[0]=0x01;
+//    mtr_temp=1;
+//putvalue(MTR_Bit7_Name_Env,"H2_GDF");
+//putvalue(MTR_Bit6_Name_Env,"L2_GDF");
+//putvalue(MTR_Bit5_Name_Env,"H1_GDF");
+//putvalue(MTR_Bit4_Name_Env,"L1_GDF");
+//putvalue(MTR_Bit3_Name_Env,"H2_VDS");
+//putvalue(MTR_Bit2_Name_Env,"L2_VDS");
+//putvalue(MTR_Bit1_Name_Env,"H1_VDS");
+//putvalue(MTR_Bit0_Name_Env,"L1_VDS");
+//  
+//  }
+//  if(@this==0x03)
+//  {
+//    Add[0]=0x02;
+//    mtr_temp=2;
+//putvalue(MTR_Bit7_Name_Env,"RESERVED");
+//putvalue(MTR_Bit6_Name_Env,"RESERVED");
+//putvalue(MTR_Bit5_Name_Env,"LOCK");
+//putvalue(MTR_Bit4_Name_Env,"LOCK");
+//putvalue(MTR_Bit3_Name_Env,"LOCK");
+//putvalue(MTR_Bit2_Name_Env,"IN1/PH");
+//putvalue(MTR_Bit1_Name_Env,"IN2/EN");
+//putvalue(MTR_Bit0_Name_Env,"CLR_FLT");
+//  
+//  }
+//  
+//    if(@this==0x04)
+//  { 
+//    Add[0]=0x03;
+//    mtr_temp=3;
+//putvalue(MTR_Bit7_Name_Env,"TDEAD");
+//putvalue(MTR_Bit6_Name_Env,"TDEAD");
+//putvalue(MTR_Bit5_Name_Env,"WD_EN");
+//putvalue(MTR_Bit4_Name_Env,"WD_DLY");
+//putvalue(MTR_Bit3_Name_Env,"WD_DLY");
+//putvalue(MTR_Bit2_Name_Env,"IDRIVE");
+//putvalue(MTR_Bit1_Name_Env,"IDRIVE");
+//putvalue(MTR_Bit0_Name_Env,"IDRIVE");
+//  }
+//  
+//  if(@this==0x05)
+//  {
+//
+//    Add[0]=0x04;
+//    mtr_temp=4;
+//putvalue(MTR_Bit7_Name_Env,"SO_LIM");
+//putvalue(MTR_Bit6_Name_Env,"VDS");
+//putvalue(MTR_Bit5_Name_Env,"VDS");
+//putvalue(MTR_Bit4_Name_Env,"VDS");
+//putvalue(MTR_Bit3_Name_Env,"DIS_H2_VDS");
+//putvalue(MTR_Bit2_Name_Env,"DIS_L2_VDS");
+//putvalue(MTR_Bit1_Name_Env,"DIS_H1_VDS");
+//putvalue(MTR_Bit0_Name_Env,"DIS_L1_VDS");
+//  
+//  }
+//  if(@this==0x06)
+//  {
+// Add[0]=0x05;
+//    mtr_temp=5;
+//putvalue(MTR_Bit7_Name_Env,"TOFF");
+//putvalue(MTR_Bit6_Name_Env,"TOFF");
+//putvalue(MTR_Bit5_Name_Env,"CHOP_DIS");
+//putvalue(MTR_Bit4_Name_Env,"VREF_SCL");
+//putvalue(MTR_Bit3_Name_Env,"VREF_SCL");
+//putvalue(MTR_Bit2_Name_Env,"SH_EN");
+//putvalue(MTR_Bit1_Name_Env,"GAIN_CS");
+//putvalue(MTR_Bit0_Name_Env,"GAIN_CS");
+//  
+//  }
+//}
+
+//on envVar MTR_Write_Env
+//{
+//     if(@this==1)
+//  {
+//    
+//mtr[0]=0;
+//mtr[0]=mtr[0]|getvalue(MTR_Bit7_Write_Env);
+//mtr[0]=mtr[0]<<1;
+//mtr[0]=mtr[0]|getvalue(MTR_Bit6_Write_Env);
+//mtr[0]=mtr[0]<<1;
+//mtr[0]=mtr[0]|getvalue(MTR_Bit5_Write_Env);
+//mtr[0]=mtr[0]<<1;
+//mtr[0]=mtr[0]|getvalue(MTR_Bit4_Write_Env);
+//mtr[0]=mtr[0]<<1;
+//mtr[0]=mtr[0]|getvalue(MTR_Bit3_Write_Env);
+//mtr[0]=mtr[0]<<1;
+//mtr[0]=mtr[0]|getvalue(MTR_Bit2_Write_Env);
+//mtr[0]=mtr[0]<<1;
+//mtr[0]=mtr[0]|getvalue(MTR_Bit1_Write_Env);
+//mtr[0]=mtr[0]<<1;
+//mtr[0]=mtr[0]|getvalue(MTR_Bit0_Write_Env);
+//    
+// Diag_Req.PduLength=0x8;
+// Diag_Req.byte(0)=0x06;
+// Diag_Req.byte(1)=0x2E;
+// Diag_Req.byte(2)=0xFD;
+// Diag_Req.byte(3)=0x09;
+// Diag_Req.byte(4)=chip[0];
+// Diag_Req.byte(5)=Add[0];
+// Diag_Req.byte(6)=mtr[0];
+//   
+// triggerPDU(Diag_Req);
+//  setTimer(Tw,300);
+//  }
+//}
+
+//on envVar MTR_Read_Env
+//{
+//     if(@this==1)
+//  {
+// Diag_Req.PduLength=0x8;
+// Diag_Req.byte(0)=0x03;
+// Diag_Req.byte(1)=0x22;
+// Diag_Req.byte(2)=0xFD;
+// Diag_Req.byte(3)=0x08;
+// triggerPDU(Diag_Req);
+//  setTimer(Tw,300);
+//  }
+//}
+//
+//

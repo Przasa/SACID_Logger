@@ -1,0 +1,37 @@
+
+P01
+BUSNET-4120 fix minimum delay
+P02
+BUSNET-4283 NM FCAB/ FCIB GenSigFuncType
+P03
+BUSNET-4528 NM-PNC-PARTICIPATION
+P04
+BUSNET-4529 NMPdu-UnusedBitPattern
+P05
+BUSNET-4556 sok validation
+P06
+BUSNET-4558 remove zero timeouts
+P07
+BUSNET-4586 NmECU
+P08
+BUSNET-4646 Native Sender to PDU
+P09
+BUSNET-4648 SOK Key-IDs
+P10
+BUSNET-4688 CanNmClusterCoupling.nmBusloadReductionEnabled
+P11
+BUSNET-4735 - signals > 64 bits as OPAQUE and SOK > 32 bits as OPAQUE
+P12
+BUSNET-4791 ImplementationDataType für Applikationssignale (FIONA)
+P13
+BUSNET-4819 Data-ID Length of SOK-PDUs
+P14
+BUSNET-4850 falsche NM Message Timeout Time entfernen
+P15
+BUSNET-4868 Entfernen von PNC-Parametern bei Ethernet und LIN
+P16
+BUSNET-5206 SOK-Absicherung durch extra Signatur-PDU
+P17
+BUSNET-5207 Startposition von Signalgruppen entfernt
+P18
+BUSNET-5217 Delete unreferenced Signals amd BUSNET-5319_ISignalVoid_-_Korrekturen_für_E2E_und_SOK

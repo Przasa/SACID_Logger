@@ -1,0 +1,71 @@
+SACID_Env
+DefaultSession: Default_Session_Env
+ExtendedSession: Extended_Session_Env
+Security_Access_Req: Security_Access_Req
+	-> Session_Resp_Env
+SecurityAccessKey: Security_Access_Key
+AptivSessionReq: Aptiv_Session_Env
+	-> Security_Respo_Env
+
+Tester Present: Tester_Present_Env (SACID_Env_Updated)
+NM Message Activation: CAN_FD_Env
+
+Analog_Inpu_Read_Env:	Diag_Reg[8]:0x03, 0x22, 0xFD, 0x00
+
+
+
+CAPL / .NET	... CAN FRAME: 06 50 01 00 32 01 F4 00 
+CAPL / .NET	... CAN FRAME: 06 50 03 00 32 01 F4 00 
+CAPL / .NET	... CAN FRAME: 06 67 61 04 05 06 07 00 
+CAPL / .NET	... CAN FRAME: 02 67 62 00 00 00 00 00 
+CAPL / .NET	... CAN FRAME: 06 50 60 00 32 01 F4 00 
+CAPL / .NET	... CAN FRAME: 02 7E 00 00 00 00 00 00 
+CAPL / .NET	... CAN FRAME: 02 7E 00 00 00 00 00 00 
+CAPL / .NET	... CAN FRAME: 02 7E 00 00 00 00 00 00 
+CAPL / .NET	... CAN FRAME: 02 7E 00 00 00 00 00 00 
+System	End of measurement 04:34:35.693 pm
+
+CAPL / .NET	system variable arrived
+CAPL / .NET	jumping into state: 1
+CAPL / .NET	system variable arrived
+CAPL / .NET	STATE: 1 (SESSION_DEFAULT)
+CAPL / .NET	... CAN FRAME: 02 10 01 FF FF FF FF FF 
+CAPL / .NET	... CAN FRAME: 06 50 01 00 32 01 F4 00 
+CAPL / .NET	veryfing response in state: 1,
+CAPL / .NET	jumping into state: 2
+CAPL / .NET	STATE: 2 (SESSION_EXTENDED)
+CAPL / .NET	... CAN FRAME: 02 10 03 FF FF FF FF FF 
+CAPL / .NET	... CAN FRAME: 06 50 03 00 32 01 F4 00 
+CAPL / .NET	veryfing response in state: 2,
+CAPL / .NET	jumping into state: 3
+CAPL / .NET	STATE: 3 (SECURITY_REQUEST)
+CAPL / .NET	... CAN FRAME: 02 27 61 FF FF FF FF FF 
+CAPL / .NET	... CAN FRAME: 06 67 61 04 05 06 07 00 
+CAPL / .NET	veryfing response in state: 3,
+CAPL / .NET	jumping into state: 4
+CAPL / .NET	STATE: 4 (SECURITY_KEY)
+CAPL / .NET	... CAN FRAME: 06 27 62 00 01 02 03 FF 
+CAPL / .NET	... CAN FRAME: 02 67 62 00 00 00 00 00 
+CAPL / .NET	veryfing response in state: 4,
+CAPL / .NET	jumping into state: 5
+CAPL / .NET	STATE: 5 (SESSION_APTIV)
+CAPL / .NET	... CAN FRAME: 02 10 60 00 01 02 03 FF 
+CAPL / .NET	... CAN FRAME: 06 50 60 00 32 01 F4 00 
+CAPL / .NET	veryfing response in state: 5,
+CAPL / .NET	jumping into state: 6
+CAPL / .NET	STATE: 6 (CYCLIC TESTER)
+CAPL / .NET	... CAN FRAME: 02 3E 00 00 00 02 03 FF 
+CAPL / .NET	jumping into state: 7
+CAPL / .NET	... CAN FRAME: 02 7E 00 00 00 00 00 00 
+CAPL / .NET	STATE: 7 (CYCLIC NMGATEWAY)
+CAPL / .NET	... CAN FRAME: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0
+CAPL / .NET	finish
+CAPL / .NET	... CAN FRAME: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0
+CAPL / .NET	... CAN FRAME: 02 3E 00 00 00 02 03 FF 
+CAPL / .NET	... CAN FRAME: 02 7E 00 00 00 00 00 00 
+
+     Time       Chn     ID          Name                                    Event Type     Dir    DLC   Data                                                                                                                                                                                              
+ [-] 0.499525   CAN 1   1C46001Bx   ISOx_SACID_1_Resp_FD_XIX_HCP5_CANFD01   CAN FD Frame   Rx     15    00 3B 62 FD 00 0E 97 0B FF 02 F0 06 52 0D 4B 0D 49 02 45 0B EF 0B 3F 0D 1B 0D 1A 0D 17 0D A3 01 43 0D 43 0E AC 01 36 00 00 00 00 00 00 00 00 00 59 00 59 00 D5 00 D5 07 9E 0C F0 35 39 00 00 00   
+       |  ISOx_SACID_1_Resp_FD_XIX_HCP5_CANFD01   -   -   40   00 3B 62 FD 00 0E 97 0B FF 02 F0 06 52 0D 4B 0D 49 02 45 0B EF 0B 3F 0D 1B 0D 1A 0D 17 0D A3 01 43 0D 43 0E AC 01 36 00 00 00 00 00 00 00 00 00 59 00 59 00 D5 00 D5 07 9E 0C F0 35 39 00 00 00      
+
+
