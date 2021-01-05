@@ -20,8 +20,7 @@ on message 0x1c46001Bx{ //prawdopodobnie odpowiedz na requesta diagnostycznego. 
     a[i]=this.byte(i); //(int i=0 ;i<6 ;i++);
 
     else if(a[2]==0x62 && a[3]==0xFD && a[4]==0x08) 
-        {
-
+    {
         for(i=5;i<=22;i++)
         {
             a[i]=this.byte(i);  //a[5:22] = this.byte(5:22)
@@ -32,20 +31,18 @@ on message 0x1c46001Bx{ //prawdopodobnie odpowiedz na requesta diagnostycznego. 
                 mtr_reg[i-5][j]=temp[j];    //mtr_reg[0:18=dany_byte][0:8_dany_bit]=
             }   
         }
-
+    }
     putvalue(MTR_Bit7_Read_Env,mtr_reg[(mtr_temp+mtr_value)][7]);   // (od 1 do 7)
 
 }
 
 
-
-
 on envVar MTR_Register_Address_Env {
-    mtr_temp=@this-1
+    mtr_temp=@this-1 (this=1:7)
 }
 
 on envVar MTR_Chip_ID_Env {
-    mtr_value=@this*3
+    // mtr_value=@this*3
     switch(@this){
         case 0x01: mtr_value=0; break;
         case 0x02: mtr_value=6; break;
