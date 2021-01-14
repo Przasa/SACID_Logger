@@ -212,6 +212,8 @@ on sysvar LoggerNamespace::svButton{
   }
 }
 
+// ::::::::::::::::::::::::::::::::::::::::::: CAN FRAMES  :::::::::::::::::::::::::::::::::::::::::::
+
 sendRequest_diag(byte frame[],int size){
   int i;
   
@@ -373,62 +375,3 @@ int getMessageType(byte hex_frame[], int frame_size){
   }
 }
 
-// :::::: SAMPLES ::::::
-
-// on signal TestSignal{
-//   write("costam");
-// }
-
-// on message TestMessage{
-//   write("test message");
-// }
-
-
-//variables
-//{ 
-//  int ar[100];
-//}
-//
-//on diagResponse TCCM.*
-//{
-//  char tmp[8];    // Temporary buffer containing single HEX value
-//  char out[301];  // Bigger output string and "local" to function
-//  // Better to place them there (i and response) if they are not global
-//  int i;
-//  byte response[100];
-//  
-//  out[0] = 0;     // Clear output string
-//  
-//  s1 = DiagGetPrimitiveData(this, response, elcount(response));
-//
-//  for (i = 0; i < s1; i++)
-//  { 
-//    ar[i] = response[i];
-//    snprintf(tmp, elcount(tmp), "%.2X ", response[i]);  // byte to HEX convert
-//    strncat(out, tmp, elcount(out));  // Concatenate HEX value to output string
-//  }
-//
-//  write("HEX Response : %s", out);
-//}
-
-
-  //  // definition of a character array buffer
-  // char buffer[100];
-  // // conversion of an integer variable to a character array
-  // snprintf(buffer,elcount(buffer),"%d",integervariable);
-  // // setting of a system variable of type string with the buffer
-  // sysSetVariableString(sysvar::my_string_sysvar,buffer);
-
-//on timer tDelay
-//{
-//  @EnvDelayFunct = 1;
-//}
-//
-//void delay(int ms)
-//{
-//  int a;
-//  write("Wait for %i ms", ms); 
-//  setTimer(tDelay, ms);
-//  a = testWaitForEnvVar(EnvDelayFunct, 0);
-//  @EnvDelayFunct = 0;
-//}
