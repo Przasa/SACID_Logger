@@ -17,63 +17,29 @@ variables
   const MOTOR_REGISTERS=6;
   const BITS_IN_BYTE=8;
   
-  message 0x111 msg;
   pdu ISOx_SACID_1_Req_FD_XIX_HCP5_CANFD01 Diag_Req;
   //byte req_mtr_read[8] = {0x03,0x22,0xFD,0x08,0x01,0x02,0x01,0xFF};
   //byte req_mtr_read[8] = {0x03,0x22,0xFD,0x08};
   byte req_mtr_read[8] = {0x03,0x22,0xFD,0x08,0x00,0x02,0x03,0xFF};
   byte resp_mtr_read[5] = {0x00, 0x15, 0x62, 0xFD, 0x08}; // TODO: check other bytes
 
-//  int motor_data[18][8]; // 3 drivers * 6 registers ; 8 bits for each // its better to close it.
   int motor_data[MOTOR_DRIVERS*MOTOR_REGISTERS][BITS_IN_BYTE];
   char strings_motor_drivers[3][50] = {"Motor 1, Motor 2","Motor 1-2, Motor 3-4","Motor 3, Motor 4"};
   char strings_motor_registers[6][50] = {"Fault Status","VDS and GDS status","Main Control Register","IDrive and WD Control","VDS Control","Config Control"};
   
-  msTimer register_switch_tim;
-  
-  int current_chip = 0;
-  int current_register=0;
-  int chip_ids[3]={1,2,3};
-  int register_ids[6]={1,2,3,4,5,6};
+ 
+
+
 }
 
+
+
+// UI:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 on key 'n'{
   send_motor_request(req_mtr_read,elCount(req_mtr_read));
 }
 
-on key 'm'{ //todo: na przycisk
-// start_request_cycle();
-}
 
-// TESTING:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
- on start{
-  int i;
-  byte bytes[5] = {0x1,0x2,0x34,0xFF,0xA2};
-  
-  print_bytes(bytes);
-  
- } 
-
-on key 'i'{
-   byte bytes[5] = {0x1,0x2,0x34,0xFF,0xA2};
-  
-  print_bytes(bytes);
-}
-
-print_bytes(byte bytes[]){
-  int i;
-  char _char[10];
-  char _chars[100];
-  
-  snprintf(_chars,elCount(_chars),"");
-  for(i=0;i<elCount(bytes);i++){
-    snprintf(_char,elCount(_char),"%.3d ",bytes[i]);
-    strncat(_chars,_char,elCount(_chars));
-  }
-  write("PRINTED FRANE: %s",_chars);
-  
-}
 
 
 //Motor Driver Logger FUNCTIONS::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -96,21 +62,9 @@ handle_regsiter_frame(byte data_frame[]){
     print_bytes(data_frame);
     print_motor_array();
   }
-  
 
 }
 
-
-int validate_frame(byte verifiedFrame[], byte masterFrame[]){
-  int i;
-  print_bytes(masterFrame);
-  print_bytes(verifiedFrame);
-  
-  for (i=0;i<elCount(masterFrame);i++){
-    if(masterFrame[i]!=verifiedFrame[i]) return 0;
-  }
-  return 1;
-}
 
 store_motor_registers(byte byte_frame[]){
   int i,j;
@@ -148,43 +102,6 @@ print_motor_array(){
   }
 }
 
-//UI FUNCTIONS::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-start_request_cycle(){
-
-  current_chip=chip_ids[0];
-  current_register=register_ids[0];
-  askForRegister(current_chip,current_register);
-  
-}
-
-
-askForRegister(int chip_id, int register_id){
-  
-  if(chip_id<=_maxOfArray(chip_ids) && register_id <=_maxOfArray(register_ids)){
-      putValue(MTR_Chip_ID_Env,chip_id);
-      putValue(MTR_Register_Address_Env,register_id);
-      send_motor_request(req_mtr_read,elCount(req_mtr_read));
-
-      setTimer(register_switch_tim,300);
-  }
-}
-
-
-on timer register_switch_tim{
-//   write("RULETTE_TIMER: chip_id=%d, register_id=%d",current_chip,current_register);
-  if(current_register!=register_ids[elCount(register_ids)-1]){
-    current_register=_nextInArray(current_register,register_ids);
-  } else if(current_chip!=chip_ids[elCount(chip_ids)-1] && current_register==register_ids[elCount(register_ids)-1]){
-    current_chip=_nextInArray(current_chip,chip_ids);
-    current_register=register_ids[0];
-  } else{
-    return;
-  }
-  
-  askForRegister(current_chip,current_register);
-}
-
 
 
 //CAN FRAMES::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -215,6 +132,17 @@ on message 0x1c46001Bx{
 
 //RAW FUNCTIONS::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+int validate_frame(byte verifiedFrame[], byte masterFrame[]){
+  int i;
+  print_bytes(masterFrame);
+  print_bytes(verifiedFrame);
+  
+  for (i=0;i<elCount(masterFrame);i++){
+    if(masterFrame[i]!=verifiedFrame[i]) return 0;
+  }
+  return 1;
+}
+
 int _maxOfArray(int values[]){
   int m =0;
   int i;
@@ -237,4 +165,24 @@ int _nextInArray(int value, int values[]){
   
 }
 
+print_bytes(byte bytes[]){
+  int i;
+  char _char[10];
+  char _chars[100];
+  
+  snprintf(_chars,elCount(_chars),"");
+  for(i=0;i<elCount(bytes);i++){
+    snprintf(_char,elCount(_char),"%.3d ",bytes[i]);
+    strncat(_chars,_char,elCount(_chars));
+  }
+  write("PRINTED FRANE: %s",_chars);
+  
+}
 
+
+// TESTINNG:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+on key 'i'{
+  byte bytes[5] = {0x11,0x22,0x33,0x44,0x22};
+
+  print_bytes(bytes);
+}

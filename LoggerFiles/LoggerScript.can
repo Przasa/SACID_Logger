@@ -12,7 +12,7 @@ variables
   // FRAMES
   pdu ISOx_SACID_1_Req_FD_XIX_HCP5_CANFD01 Diag_Req;
   pdu NM_Gateway_XIX_HCP5_CANFD01 NM_Msg;  
-  
+
   //TIMERS AND TIMEOUTS
   msTimer timer_for_jump;
   msTimer timer_for_response;
