@@ -1,3 +1,33 @@
+Inne taski:
+
+
+1. Realizacja inicjalizacji
+2. Doklejenie Logger Scriptera
+3. Odczytanie wartosci na UI
+    + odczyt i zapis switcha ADC 
+    + odczyt i zapis switch Motors 
+    + odczyt i zapis timeouta dla cyclica
+4. Uruchomienie funkcji logujacych -> TODO.
+
+
+Kategorie:
+A1. UI
+A2. Logika Glowna
+B1. Obluga Ramek diagnostycznych
+    - Dla inicjalizacji
+    - Dla ramek ADC
+    - Dla ramek Motorowych
+B2. Misci     
+  
+
+
+
+
+
+
+
+
+
 notatkis jakeis tu sa.
 
 vals UI:

@@ -20,11 +20,16 @@ variables
   msTimer timer_for_cyclic_nmgateway;
   msTimer timer_for_cyclic_adc;
   //msTimer timer_for_periodic_request;
+  // TODO: reduce quantity of variables
   CONST TIMEOUT_LONG=500;
   CONST TIMEOUT_SHORT=500;
   CONST TIMEOUT_CYCLIC_TESTER =3000;
   CONST TIMEOUT_CYCLIC_NMGATEWAY =100;
   CONST TIMEOUT_CYCLIC_ADC = 500;
+  
+  CONST TIMEOUT_500MS = 500;
+  CONST TIMEOUT_100MS = 100;
+  CONST TIMEOUT_ZERO =0;
   
   //MACHINE_STATES
     //  int MSTATE_WAIT=0;
@@ -36,6 +41,8 @@ variables
   const MSTATE_TESTER=6;
   const MSTATE_NMGATEWAY=7;
   const MSTATE_ADCREAD=8;
+  const MSTATE_MOTREGREAD=9;
+  const MSTATE_FREE_UI=10;
   int ACTIVE_MSTATE=0;
   
   //MESSAGE_TYPES
@@ -49,99 +56,83 @@ variables
   byte req_security_accrequest[8]={0x02,0x27,0x61,0xFF,0xFF,0xFF,0xFF,0xFF};
   byte req_security_acckey[8]={0x06,0x27,0x62,0x00,0x01,0x02,0x03,0xFF};  
   byte req_session_aptiv[8]={0x02,0x10,0x60,0x00,0x01,0x02,0x03,0xFF};
+  byte req_adc[8] = {0x03,0x22,0xFD, 0x00, 0xFF, 0xFF, 0xFF, 0xFF};
   
   byte req_cyclic_tester[8]={0x02,0x3E,0x00,0x00,0x00,0x02,0x03,0xFF}; // resp: 02 7E 00 00 00 00 00 00
   byte req_cyclic_nmgateway[24]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-  byte req_cyclic_adc[8] = {0x03,0x22,0xFD, 0x00, 0xFF, 0xFF, 0xFF, 0xFF};
   
   byte resp_session_default_positive[8] = {0x06,0x50,0x01,0x00,0x32,0x01,0xF4,0x00};
   byte resp_session_extended_positive[8]= {0x06,0x50,0x03,0x00,0x32,0x01,0xF4,0x00};
   byte resp_security_accrequest_positive[8]= {0x06,0x67,0x61,0x04,0x05,0x06,0x07,0x00}; 
   byte resp_security_acckey_positive[8]= {0x02,0x67,0x62,0x00,0x00,0x00,0x00,0x00};  
   byte resp_session_aptiv_positive[8]= {0x06,0x50,0x60,0x00,0x32,0x01,0xF4,0x00};
-  byte resp_adc[4]={0x00,0x3B,0x62,0xFD};
+  byte resp_cyclic_tester[2]={0x02,0x7E};
   byte resp_adc_header[5]={0x00,0x3B,0x62,0xFD,0x00};
-  
+
   // BUFFORS 
-  byte LAST_REQUEST_RESPONSE[64]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-  
-  // STRINGS COLLECTION   //TODO: extend this list. 
-  char string_can_received[21] = "CAN FRAME RECEIVED: ";
-  char string_can_sended[17] ="CAN FRAME SEND: ";
-  char string_cyclic_can_sended[27] ="CYCLIC CAN FRAME SENDING: ";
-  char string_adc[7] = ",ADC, ";
-  char string_empty[1] = "";
+  byte BUFFOR_REQUEST[64];
+  byte BUFFOR_RESPONSE[64];
+  int BUFFOR_REQUEST_LEN, BUFFOR_RESPONSE_LEN;
   
 }
 
-// testing
+
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// ::::::::::::::::::::::::::::::::::::::::::: GLOBAL LOGIC ::::::::::::::::::::::::::::::::::::::::::
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 on start{
-    //sendPeriodicRequest(req_cyclic_nmgateway,TIMEOUT_CYCLIC_NMGATEWAY);
-  char dest[4]="ccc";
-  char src[5]="dddd";
-  char buf[1];
-  
-  write("");
-  
-  
-  write("size: %d, values: %s",elCount(buf),buf);
-  strncat(buf,dest,elCount(dest));
-  write("size: %d, values: %s",elCount(buf),buf);
-  strncat(buf,src,elCount(buf)+elCount(dest)+elCount(src)-2);
-  write("size: %d, values: %s",elCount(buf),buf);
-  
+  //enableLogPanel(0);
 }
 
-
-
-// ::::::::::::::::::::::::::::::::::::::::::: GLOBAL LOGIC :::::::::::::::::::::::::::::::::::::::::::
 
 main_function(){  // ~ state machine
   
   switch(ACTIVE_MSTATE){
     case MSTATE_DEFSESSION:
       if (ISDEBUG) {write("STATE: 1 (SESSION_DEFAULT)");  }
-      sendRequest_diag(req_session_default,elCount(req_session_default));
-      handleReaction(TIMEOUT_LONG); break;     
+      write("initialization...");
+      sendRequest_diag(req_session_default);
+      handleReaction(TIMEOUT_500MS); break;     
     case MSTATE_EXSESSION:
       if(ISDEBUG) {write("STATE: 2 (SESSION_EXTENDED)");}
-      sendRequest_diag(req_session_extended,elCount(req_session_extended));
-      handleReaction(TIMEOUT_LONG);break;
+      sendRequest_diag(req_session_extended);
+      handleReaction(TIMEOUT_500MS);break;
     case MSTATE_SECACCREQ:
-      IF(ISDEBUG){ write("STATE: 3 (SECURITY_REQUEST)");}
-      sendRequest_diag(req_security_accrequest,elCount(req_security_accrequest));
-      handleReaction(TIMEOUT_LONG);break;
+      if(ISDEBUG){ write("STATE: 3 (SECURITY_REQUEST)");}
+      sendRequest_diag(req_security_accrequest);
+      handleReaction(TIMEOUT_500MS);break;
     case MSTATE_SECACCKEY:
       if (ISDEBUG){ write("STATE: 4 (SECURITY_KEY)");}
-      sendRequest_diag(req_security_acckey,elCount(req_security_acckey));
-      handleReaction(TIMEOUT_LONG);break;
+      sendRequest_diag(req_security_acckey);
+      handleReaction(TIMEOUT_500MS);break;
     case MSTATE_APSESSION:
       if(ISDEBUG) {write("STATE: 5 (SESSION_APTIV)");}
-      sendRequest_diag(req_session_aptiv,elCount(req_session_aptiv));
-      handleReaction(TIMEOUT_LONG);break;
+      sendRequest_diag(req_session_aptiv);
+      handleReaction(TIMEOUT_500MS);break;
     case MSTATE_TESTER:
       if(ISDEBUG) {write("STATE: 6 (CYCLIC TESTER)");}
-      sendPeriodicRequest(req_cyclic_tester,TIMEOUT_CYCLIC_TESTER);
+      startPeriodicRequest(timer_for_cyclic_tester);
       write("intialization finished.");
-      jump_mstate(TIMEOUT_SHORT,MSTATE_ADCREAD);
+      jump_mstate(TIMEOUT_ZERO,MSTATE_FREE_UI);
+      break;
+    case MSTATE_ADCREAD:  //  dead case
+      if(ISDEBUG) { write("STATE: 8 (ADC READ)");}
+      startPeriodicRequest(timer_for_cyclic_adc);
       break;
     case MSTATE_NMGATEWAY:  // dead case
       if(ISDEBUG) { write("STATE: 7 (CYCLIC NMGATEWAY)");}
-      sendPeriodicRequest(req_cyclic_nmgateway,TIMEOUT_CYCLIC_NMGATEWAY);
+      startPeriodicRequest(timer_for_cyclic_nmgateway);
       break;
-    case MSTATE_ADCREAD:
-      if(ISDEBUG) { write("STATE: 8 (ADC READ)");}
-      sendPeriodicRequest(req_cyclic_adc,TIMEOUT_CYCLIC_ADC);
+    case MSTATE_FREE_UI:  // --> waiting from user input
+      enableLogPanel(1);
+
       break;
   } 
   
 }
 
-jump_mstate(int miliseconds,int next_machine_state){
-  if(ISDEBUG) { write("jumping into state: %d",next_machine_state);}
-  ACTIVE_MSTATE=next_machine_state;
-  setTimer(timer_for_jump,miliseconds);
-}
 
 handleReaction(int timeout){
   int current_state;
@@ -157,29 +148,33 @@ handleReaction(int timeout){
     
     switch(current_state){
       case MSTATE_DEFSESSION:
-        if(compareFrames(LAST_REQUEST_RESPONSE,resp_session_default_positive)){
+        if(validate_frame(BUFFOR_RESPONSE,resp_session_default_positive)){
           jump_mstate(TIMEOUT_SHORT,MSTATE_EXSESSION);
         }
         break;
       case MSTATE_EXSESSION:
-        if(compareFrames(LAST_REQUEST_RESPONSE,resp_session_extended_positive)){
+        if(validate_frame(BUFFOR_RESPONSE,resp_session_extended_positive)){
           jump_mstate(TIMEOUT_SHORT,MSTATE_SECACCREQ);
         }
         break;
       case MSTATE_SECACCREQ:
-        if(compareFrames(LAST_REQUEST_RESPONSE,resp_security_accrequest_positive)){
+        if(validate_frame(BUFFOR_RESPONSE,resp_security_accrequest_positive)){
           jump_mstate(TIMEOUT_SHORT,MSTATE_SECACCKEY);
         }
         break;
       case MSTATE_SECACCKEY:
-        if(compareFrames(LAST_REQUEST_RESPONSE,resp_security_acckey_positive)){
+        if(validate_frame(BUFFOR_RESPONSE,resp_security_acckey_positive)){
           jump_mstate(TIMEOUT_SHORT,MSTATE_APSESSION);
         }
         break;
       case MSTATE_APSESSION:
-        if(compareFrames(LAST_REQUEST_RESPONSE,resp_session_aptiv_positive)){
+        if(validate_frame(BUFFOR_RESPONSE,resp_session_aptiv_positive)){
           jump_mstate(TIMEOUT_SHORT,MSTATE_TESTER);
-          
+        }
+      case MSTATE_ADCREAD:
+        if(validate_frame(BUFFOR_RESPONSE,resp_adc_header)){
+          printADCframe(BUFFOR_RESPONSE,BUFFOR_RESPONSE_LEN);
+          jump_mstate(TIMEOUT_ZERO,MSTATE_FREE_UI);
         }
         break;
         //default:;
@@ -188,23 +183,177 @@ handleReaction(int timeout){
   }
 }
 
+jump_mstate(int miliseconds,int next_machine_state){
+  if(ISDEBUG) { write("jumping into state: %d",next_machine_state);}
+  ACTIVE_MSTATE=next_machine_state;
+  setTimer(timer_for_jump,miliseconds);
+}
+
 on timer timer_for_jump{
   main_function();
 }
 
 on timer timer_for_response{
-  handleReaction(0);
+  handleReaction(TIMEOUT_ZERO);
+}
+
+on timer timer_for_cyclic_tester{
+  setTimer(timer_for_cyclic_tester,TIMEOUT_CYCLIC_TESTER);
+  sendRequest_diag(req_cyclic_tester);
+}
+
+on timer timer_for_cyclic_nmgateway{  //dead
+  setTimer(timer_for_cyclic_nmgateway,TIMEOUT_CYCLIC_NMGATEWAY);
+  sendRequest_nm(req_cyclic_nmgateway);
+}
+
+on timer timer_for_cyclic_adc{  //dead
+  setTimer(timer_for_cyclic_adc,TIMEOUT_CYCLIC_ADC);
+  sendRequest_diag(req_adc);
 }
 
 
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// ::::::::::::::::::::::::::::::::::::::::::: LOCAL LOGIC  ::::::::::::::::::::::::::::::::::::::::::
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+logADC(){
+  ACTIVE_MSTATE = MSTATE_ADCREAD;
+  sendRequest_diag(req_adc);
+  handleReaction(TIMEOUT_100MS);
+}
+
+logMotorRegisters(){
+  // TODO
+}
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// ::::::::::::::::::::::::::::::::::::::::::: CAN FRAMES  :::::::::::::::::::::::::::::::::::::::::::
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+// TODO: do scalenia
+sendRequest_diag(byte frame[]){
+  int i;
+
+  Diag_Req.PduLength=elCount(frame);
+  for(i=0;i<elCount(frame);i++){    Diag_Req.byte(i)=frame[i];    }
+  triggerPDU(Diag_Req);
+
+}
+
+sendRequest_nm(byte frame[]){
+  int i;
+  
+  NM_Msg.PduLength=elCount(frame);
+  for(i=0;i<elCount(frame);i++){    NM_Msg.byte(i)=frame[i];    }
+  triggerPDU(NM_Msg);
+}
+
+startPeriodicRequest(msTimer cyclicTimer){
+  setTimer(cyclicTimer,TIMEOUT_ZERO);
+}
+
+//on message 0x1c46001Bx{
+//TODO: TROSZKE TO BRZYDKIE
+on PDU ISOx_SACID_1_Resp_FD_XIX_HCP5_CANFD01{ //~=onRequestReponse
+  int i=0;
+  int response_length;
+  byte arrived_response[64];
+
+  response_length = this.PduLength;
+  for(i=0;i<response_length;i++){    arrived_response[i]=this.byte(i);  }
+
+  if(!isBackgroundFrame(arrived_response,response_length)){
+    saveResponse(arrived_response,response_length);
+  }
+}
+
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// ::::::::::::::::::::::::::::::::::::::::::: MISC FUNCTIONS ::::::::::::::::::::::::::::::::::::::::
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
-// ::::::::::::::::::::::::::::::::::::::::::: INPUTS / OUTPUTS :::::::::::::::::::::::::::::::::::::::::::
+print_bytes(byte bytes[]){
+  int i;
+  char byte_as_char[10];
+  char bytes_as_chars[100];
+  
+  snprintf(bytes_as_chars,elCount(bytes_as_chars),"");
+  for(i=0;i<elCount(bytes);i++){
+    snprintf(byte_as_char,elCount(byte_as_char),";%.3d",bytes[i]);
+    strncat(bytes_as_chars,byte_as_char,elCount(bytes_as_chars));
+  }
+  write("LOGGED FRANE %s",bytes_as_chars);
+}
 
-on sysvar LoggerNamespace::svButton{
+printADCframe(byte hex_frame[], int frame_length){
+  int i;
+  char byte_as_char[10];
+  char bytes_as_chars[500];
+  char _date[50];
+  char fullString[1000];
+  
+  getLocalTimeString(_date);
+  snprintf(fullString,elCount(fullString),"");
+  snprintf(bytes_as_chars,elCount(bytes_as_chars),"");
+  
+  for(i=0;i<frame_length;i++){
+    snprintf(byte_as_char,elCount(byte_as_char),";%.3d",hex_frame[i]);
+    strncat(bytes_as_chars,byte_as_char,elCount(bytes_as_chars));
+  }
+  snprintf(fullString,elCount(fullString),"%s;ADC values:%s",_date,bytes_as_chars);
+  write("%s",fullString);
+}
+
+saveResponse(byte frame[], int length){
+    int i;
+    BUFFOR_RESPONSE_LEN=length;
+    for (i=0;i<elCount(BUFFOR_RESPONSE);i++){    BUFFOR_RESPONSE[i]=0;  }
+    for (i=0;i<BUFFOR_RESPONSE_LEN;i++){    BUFFOR_RESPONSE[i] = frame[i];  } 
+}
+
+int isBackgroundFrame(byte frame[], int length){
+  if(validate_frame(frame,resp_cyclic_tester)==1) {return 1;}
+  //else if(validate_frame(frame,?)) {return 1}  // can add new noise;
+  return 0;
+}
+
+int validate_frame(byte verifiedFrame[], byte masterFrame[]){
+  int i;
+  
+  for (i=0;i<elCount(masterFrame);i++){
+    if(masterFrame[i]!=verifiedFrame[i]) return 0;
+  }
+  return 1;
+}
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// ::::::::::::::::::::::::::::::::::::::::::: UI INPUTS / OUTPUTS :::::::::::::::::::::::::::::::::::
+// :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+
+enableLogPanel(int enable){
+  if (enable==1){
+    enableControl("LoggerPanel","ctrlInitButton",1);
+    enableControl("LoggerPanel","ctrlPeriodicTriggerStart",1);
+    enableControl("LoggerPanel","ctrlPeriodicTriggerStop",0);
+    enableControl("LoggerPanel","ctrlSingleTrigger",1);
+    enableControl("LoggerPanel","ctrlADC",1);
+    enableControl("LoggerPanel","ctrlRegisters",1);
+    enableControl("LoggerPanel","ctrlTraceBar",1);    
+  }else{
+    enableControl("LoggerPanel","ctrlPeriodicTriggerStart",0);
+    enableControl("LoggerPanel","ctrlPeriodicTriggerStop",0);
+    enableControl("LoggerPanel","ctrlSingleTrigger",0);
+    enableControl("LoggerPanel","ctrlADC",0);
+    enableControl("LoggerPanel","ctrlRegisters",0);
+    enableControl("LoggerPanel","ctrlTraceBar",0);
+  }
+}
+on sysvar LoggerNamespace::svInitButton{
   
   if(@this==1){
     write("starting initial configuration...");
+    enableControl("LoggerPanel","ctrlInitButton",0);
     // key pressed
     jump_mstate(TIMEOUT_SHORT,MSTATE_DEFSESSION);
   }else{
@@ -212,166 +361,35 @@ on sysvar LoggerNamespace::svButton{
   }
 }
 
-// ::::::::::::::::::::::::::::::::::::::::::: CAN FRAMES  :::::::::::::::::::::::::::::::::::::::::::
-
-sendRequest_diag(byte frame[],int size){
-  int i;
-  
-  Diag_Req.PduLength=size;
-  for(i=0;i<size;i++){    Diag_Req.byte(i)=frame[i];    }
-  triggerPDU(Diag_Req);
-  
-  if(ISDEBUG){
-    printFrame(frame,size,string_can_sended,elCount(string_can_sended)); // optional  
-  }
-  
-  
+on sysvar LoggerNamespace::svSingleButton{
+  if(readui_adc()==1){    logADC();} // TODO: do wydzielenie w 2. module  } 
+  if(readui_registers()==1){ logMotorRegisters();} // TODO: do wydzielenia w 2. module
 }
 
-sendRequest_nm(byte frame[],int size){
-  int i;
-  
-  NM_Msg.PduLength=size;
-  for(i=0;i<size;i++){    NM_Msg.byte(i)=frame[i];    }
-  triggerPDU(NM_Msg);
-  
-  IF(ISDEBUG){
-    printFrame(frame,size,string_cyclic_can_sended,elCount(string_cyclic_can_sended));
-  }
-  
+on sysvar LoggerNamespace::svPeriodicStartButton{
+//  write("Start Button");
+//  sysSetVariableInt("LoggerNamespace","svPeriodicStartButton",1);
+
+  enableControl("LoggerPanel","ctrlPeriodicTriggerStart",0);
+  enableControl("LoggerPanel","ctrlPeriodicTriggerStop",1);
+}
+
+on sysvar LoggerNamespace::svPeriodicEndButton{
+//  write("End Button");
+  enableControl("LoggerPanel","ctrlPeriodicTriggerStart",1);
+  enableControl("LoggerPanel","ctrlPeriodicTriggerStop",0);
 }
 
 
-sendPeriodicRequest(byte frame[], int cyclicTime){
-  
-  if(compareFrames(frame,req_cyclic_tester)==1){
-    sendRequest_diag(req_cyclic_tester,elCount(req_cyclic_tester));
-    setTimer(timer_for_cyclic_tester,TIMEOUT_CYCLIC_TESTER);
-  } else if(compareFrames(frame,req_cyclic_nmgateway)==1){
-    sendRequest_diag(req_cyclic_nmgateway,elCount(req_cyclic_nmgateway));
-    setTimer(timer_for_cyclic_nmgateway,TIMEOUT_CYCLIC_NMGATEWAY);
-  } else if(compareFrames(frame,req_cyclic_adc)==1){
-    sendRequest_diag(req_cyclic_adc,elCount(req_cyclic_adc));
-    setTimer(timer_for_cyclic_adc,TIMEOUT_CYCLIC_ADC);
-  }
-  
+int readui_adc(){
+  return sysGetVariableInt("LoggerNamespace","svADCswitch");
 }
 
-on timer timer_for_cyclic_tester{
-  setTimer(timer_for_cyclic_tester,TIMEOUT_CYCLIC_TESTER);
-  sendRequest_diag(req_cyclic_tester,elCount(req_cyclic_tester));
+int readui_registers(){
+  return sysGetVariableInt("LoggerNamespace","svRegisterSwitch");
 }
 
-on timer timer_for_cyclic_nmgateway{
-  setTimer(timer_for_cyclic_nmgateway,TIMEOUT_CYCLIC_NMGATEWAY);
-  sendRequest_nm(req_cyclic_nmgateway,elCount(req_cyclic_nmgateway));
-}
-
-on timer timer_for_cyclic_adc{
-  setTimer(timer_for_cyclic_adc,TIMEOUT_CYCLIC_ADC);
-  sendRequest_diag(req_cyclic_adc,elCount(req_cyclic_adc));
-}
-
-
-//on message 0x1c46001Bx{
-on PDU ISOx_SACID_1_Resp_FD_XIX_HCP5_CANFD01{ //~=onRequestReponse
-  int i=0;
-  int _message_size=8;
-  int _message_type=0;
-  byte _message_content[200];
-  _message_size = this.PduLength;
-  
-  // clearing response buffer
-  for (i=0;i<elCount(LAST_REQUEST_RESPONSE);i++){    LAST_REQUEST_RESPONSE[i]=0;  }
-  // storing response
-  for (i=0;i<_message_size;i++){
-    _message_content[i]=this.byte(i);
-    LAST_REQUEST_RESPONSE[i] = _message_content[i];
-  } 
-  
-  _message_type=getMessageType(_message_content,_message_size);
-  switch(_message_type){
-    case MESTYPE_ADC:
-      printADCframe(_message_content,_message_size); break;
-     case MESTYPE_DEFAULT:
-      if(ISDEBUG){ printFrame(_message_content,_message_size,string_can_received,elCount(string_can_received));}
-  }
-  
-//  if(ISDEBUG){
-//    printFrame(LAST_REQUEST_RESPONSE,_message_size,string_can_received,elCount(string_can_received));
-//  } else{
-//    if(_message_size>8){
-//      printFrame(LAST_REQUEST_RESPONSE,_message_size,string_adc,elCount(string_adc)); 
-//    } //optional    
-//  }
-//  
- 
-  
-}
-
-// ::::::::::::::::::::::::::::::::::::::::::: MISC FUNCTIONS :::::::::::::::::::::::::::::::::::::::::::
-
-printFrame(byte hex_frame[], int size, char prefix[], int prefix_size){
-  char _char_buffer[200]="";
-  char _char_temp[8];
-  int i;
-  
-  snprintf(_char_buffer,size,""); // clearing variable  
-
-  if(prefix_size>0){    strncat(_char_buffer,prefix,prefix_size);  } //adding prefix
-    
-  for (i=0;i<size;i++){
-    snprintf(_char_temp,elCount(_char_temp),"%02X ",hex_frame[i]);  //%.2X
-    strncat(_char_buffer,_char_temp,elcount(_char_buffer));
-  }
-    
-  write("%s",_char_buffer);
-
-}
-
-printADCframe(byte hex_frame[],int size){
-  char _char_buffer[200]="";
-  char _char_temp[3];
-  int isNewVal=0;
-  int i;
-  
-  strncat(_char_buffer,string_adc,elCount(string_adc));
-  
-  for (i=0;i<size;i++){
-    if (i<=4) {continue;}
-    isNewVal = ((i %2)==0 & i>=6);
-    snprintf(_char_temp,elCount(_char_temp),"%02X",hex_frame[i]);  //%.2X
-    if(isNewVal){strncat(_char_temp,",",8);}
-    write("char buffer: %s",_char_temp);
-    strncat(_char_buffer,_char_temp,elcount(_char_buffer)+4);
-  }
-  
-  
-  
-  write("%s",_char_buffer);
-
-}
-
-//"try, catch" would be nice here ;) 
-int compareFrames(byte frame_verified[], byte frame_correct[]){
-  int i;
-
-  for (i=0;i<elCount(frame_correct);i++){
-    if (frame_verified[i]!=frame_correct[i]) { 
-      //write ("response incorrect!");
-      return 0;
-    }
-  }
-  
-  return 1;
-  
-}
-
-int getMessageType(byte hex_frame[], int frame_size){
-  if(compareFrames(hex_frame,resp_adc_header)==1){
-    return MESTYPE_ADC;
-  } else{
-    return MESTYPE_DEFAULT;
-  }
+int readui_period(){
+  return sysGetVariableInt("LoggerNamespace","svPeriod");
 }
 
