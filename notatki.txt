@@ -6,7 +6,7 @@ Inne taski:
 3. Odczytanie wartosci na UI
     + odczyt i zapis switcha ADC 
     + odczyt i zapis switch Motors 
-    + odczyt i zapis timeouta dla cyclica
+    + odczyt i zapis timeouta dla cyclica   --> moze lepiej sobie to darowac ?
 4. Uruchomienie funkcji logujacych -> TODO.
 
 

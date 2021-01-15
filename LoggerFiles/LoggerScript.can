@@ -21,15 +21,13 @@ variables
   msTimer timer_for_cyclic_adc;
   //msTimer timer_for_periodic_request;
   // TODO: reduce quantity of variables
-  CONST TIMEOUT_LONG=500;
-  CONST TIMEOUT_SHORT=500;
-  CONST TIMEOUT_CYCLIC_TESTER =3000;
-  CONST TIMEOUT_CYCLIC_NMGATEWAY =100;
-  CONST TIMEOUT_CYCLIC_ADC = 500;
-  
   CONST TIMEOUT_500MS = 500;
   CONST TIMEOUT_100MS = 100;
   CONST TIMEOUT_ZERO =0;
+  CONST TIMEOUT_CYCLIC_TESTER =TIMEOUT_500MS;
+  CONST TIMEOUT_CYCLIC_NMGATEWAY =TIMEOUT_500MS;
+  CONST TIMEOUT_CYCLIC_ADC = TIMEOUT_500MS;
+  
   
   //MACHINE_STATES
     //  int MSTATE_WAIT=0;
@@ -149,27 +147,27 @@ handleReaction(int timeout){
     switch(current_state){
       case MSTATE_DEFSESSION:
         if(validate_frame(BUFFOR_RESPONSE,resp_session_default_positive)){
-          jump_mstate(TIMEOUT_SHORT,MSTATE_EXSESSION);
+          jump_mstate(TIMEOUT_100MS,MSTATE_EXSESSION);
         }
         break;
       case MSTATE_EXSESSION:
         if(validate_frame(BUFFOR_RESPONSE,resp_session_extended_positive)){
-          jump_mstate(TIMEOUT_SHORT,MSTATE_SECACCREQ);
+          jump_mstate(TIMEOUT_100MS,MSTATE_SECACCREQ);
         }
         break;
       case MSTATE_SECACCREQ:
         if(validate_frame(BUFFOR_RESPONSE,resp_security_accrequest_positive)){
-          jump_mstate(TIMEOUT_SHORT,MSTATE_SECACCKEY);
+          jump_mstate(TIMEOUT_100MS,MSTATE_SECACCKEY);
         }
         break;
       case MSTATE_SECACCKEY:
         if(validate_frame(BUFFOR_RESPONSE,resp_security_acckey_positive)){
-          jump_mstate(TIMEOUT_SHORT,MSTATE_APSESSION);
+          jump_mstate(TIMEOUT_100MS,MSTATE_APSESSION);
         }
         break;
       case MSTATE_APSESSION:
         if(validate_frame(BUFFOR_RESPONSE,resp_session_aptiv_positive)){
-          jump_mstate(TIMEOUT_SHORT,MSTATE_TESTER);
+          jump_mstate(TIMEOUT_100MS,MSTATE_TESTER);
         }
       case MSTATE_ADCREAD:
         if(validate_frame(BUFFOR_RESPONSE,resp_adc_header)){
@@ -208,8 +206,9 @@ on timer timer_for_cyclic_nmgateway{  //dead
 }
 
 on timer timer_for_cyclic_adc{  //dead
+  logADC();
   setTimer(timer_for_cyclic_adc,TIMEOUT_CYCLIC_ADC);
-  sendRequest_diag(req_adc);
+  // sendRequest_diag(req_adc);
 }
 
 
@@ -335,7 +334,7 @@ enableLogPanel(int enable){
   if (enable==1){
     enableControl("LoggerPanel","ctrlInitButton",1);
     enableControl("LoggerPanel","ctrlPeriodicTriggerStart",1);
-    enableControl("LoggerPanel","ctrlPeriodicTriggerStop",0);
+    enableControl("LoggerPanel","ctrlPeriodicTriggerStop",1);
     enableControl("LoggerPanel","ctrlSingleTrigger",1);
     enableControl("LoggerPanel","ctrlADC",1);
     enableControl("LoggerPanel","ctrlRegisters",1);
@@ -355,29 +354,36 @@ on sysvar LoggerNamespace::svInitButton{
     write("starting initial configuration...");
     enableControl("LoggerPanel","ctrlInitButton",0);
     // key pressed
-    jump_mstate(TIMEOUT_SHORT,MSTATE_DEFSESSION);
+    jump_mstate(TIMEOUT_ZERO,MSTATE_DEFSESSION);
   }else{
     // key released
   }
 }
 
 on sysvar LoggerNamespace::svSingleButton{
-  if(readui_adc()==1){    logADC();} // TODO: do wydzielenie w 2. module  } 
-  if(readui_registers()==1){ logMotorRegisters();} // TODO: do wydzielenia w 2. module
+  if (@this==1){
+    if(readui_adc()==1){    logADC();} // TODO: do wydzielenie w 2. module  } 
+    if(readui_registers()==1){ logMotorRegisters();} // TODO: do wydzielenia w 2. module
+  }
 }
 
 on sysvar LoggerNamespace::svPeriodicStartButton{
 //  write("Start Button");
 //  sysSetVariableInt("LoggerNamespace","svPeriodicStartButton",1);
-
-  enableControl("LoggerPanel","ctrlPeriodicTriggerStart",0);
-  enableControl("LoggerPanel","ctrlPeriodicTriggerStop",1);
+  if(@this==1){
+    // enableControl("LoggerPanel","ctrlPeriodicTriggerStart",0); //TODO: to fix
+    // enableControl("LoggerPanel","ctrlPeriodicTriggerStop",1);
+    setTimer(timer_for_cyclic_adc,TIMEOUT_ZERO);
+  }
 }
 
 on sysvar LoggerNamespace::svPeriodicEndButton{
 //  write("End Button");
-  enableControl("LoggerPanel","ctrlPeriodicTriggerStart",1);
-  enableControl("LoggerPanel","ctrlPeriodicTriggerStop",0);
+  if(@this==1){
+    // enableControl("LoggerPanel","ctrlPeriodicTriggerStart",1); //TODO: to fix
+    // enableControl("LoggerPanel","ctrlPeriodicTriggerStop",0);
+    cancelTimer(timer_for_cyclic_adc);
+  }
 }
 
 
